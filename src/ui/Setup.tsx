@@ -3,6 +3,7 @@ import { LEVELS } from '../engine/stockfish';
 import { listVoices, defaultVoice } from '../speech/sanjaya';
 import { speechRecognitionSupported } from '../speech/recognizer';
 import type { AppSettings } from './settings';
+import { Board } from './Board';
 
 interface Props {
   settings: AppSettings;
@@ -25,20 +26,27 @@ export function Setup({ settings, onChange, onStart }: Props) {
   return (
     <section className="setup">
       <div className="hero">
-        <p className="verse">Manokshetre Chaturange…</p>
+        <p className="verse">मनोक्षेत्रे चतुरङ्गे…</p>
+        <p className="verse-tr">On the battlefield of the mind, the game begins.</p>
         <h1>Play chess with your eyes closed.</h1>
         <p className="lede">
           Speak your moves. Sanjaya narrates the battle you cannot see, and tells you when — and why — you lose track of the board.
         </p>
+        <div className="board-frame hero-board">
+          <Board id="hero" fen="start" />
+        </div>
+        <p className="ornament">♔ ♕ ♖ ♗ ♘ ♙</p>
       </div>
 
+      <div className="setup-side">
       {!sttOk && (
-        <div className="notice">
+        <div className="notice" style={{ marginBottom: 16 }}>
           This browser has no speech recognition. You can still type moves, or open Manokshetra in Chrome or Edge to play by voice.
         </div>
       )}
 
       <div className="card form">
+        <h2 className="card-title">Prepare for battle</h2>
         <Field label="Your army">
           <Segmented
             value={settings.color}
@@ -88,14 +96,15 @@ export function Setup({ settings, onChange, onStart }: Props) {
         <button className="btn primary big" onClick={onStart}>Begin the battle</button>
       </div>
 
-      <div className="card tips">
-        <h2>How to speak</h2>
+      <div className="card tips" style={{ marginTop: 16 }}>
+        <h2 className="card-title">How to speak</h2>
         <ul>
           <li><b>Moves:</b> “e4”, “knight f3”, “bishop takes c6”, “castle kingside”, “e8 queen”</li>
           <li><b>Unclear letters?</b> Use NATO words: “bravo five”, “delta four”</li>
           <li><b>Two pieces can go there?</b> “knight b d2” or “knight from b1 to d2”</li>
           <li><b>Commands:</b> “repeat”, “why”, “peek”, “help”, “resign”</li>
         </ul>
+      </div>
       </div>
     </section>
   );

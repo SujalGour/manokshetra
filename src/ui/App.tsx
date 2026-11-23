@@ -26,13 +26,13 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand" onClick={() => state.phase !== 'playing' && controller.reset()}>
+        <button className="brand" onClick={() => state.phase !== 'playing' && controller.reset()} aria-label="Manokshetra home">
           <span className="brand-mark" aria-hidden>♞</span>
-          <div>
+          <span>
             <div className="brand-name">Manokshetra</div>
-            <div className="brand-sub">मनोक्षेत्र · the battlefield of the mind</div>
-          </div>
-        </div>
+            <div className="brand-sub">मनोक्षेत्र <span>· the battlefield of the mind</span></div>
+          </span>
+        </button>
         {state.phase !== 'setup' && (
           <button className="btn ghost" onClick={() => controller.reset()}>New game</button>
         )}
@@ -54,7 +54,7 @@ export function App() {
           />
         )}
       </main>
-      <footer className="foot">Narrated by Sanjaya · Engine: Stockfish</footer>
+      <footer className="foot">“Sanjaya uvācha” — narrated by Sanjaya · engine: Stockfish</footer>
     </div>
   );
 }

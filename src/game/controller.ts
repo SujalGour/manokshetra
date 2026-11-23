@@ -32,6 +32,7 @@ export interface GameState {
   pending: Pending | null;
   log: LogEntry[];
   moves: string[];
+  lastMove: { from: string; to: string } | null;
   lastBotLine: Line | null;
   peeks: number;
   illegal: number;
@@ -60,7 +61,7 @@ export class GameController {
   private initialState(): GameState {
     return {
       phase: 'setup', fen: new Chess().fen(), playerColor: 'w', speaking: false, thinking: false,
-      pending: null, log: [], moves: [], lastBotLine: null, peeks: 0, illegal: 0, peekUntil: 0, result: null, pgn: '',
+      pending: null, log: [], moves: [], lastMove: null, lastBotLine: null, peeks: 0, illegal: 0, peekUntil: 0, result: null, pgn: '',
     };
   }
 
@@ -75,7 +76,13 @@ export class GameController {
   }
 
   private syncBoard() {
-    this.set({ fen: this.chess.fen(), moves: this.chess.history(), pgn: this.chess.pgn() });
+    const last = this.chess.history({ verbose: true }).at(-1);
+    this.set({
+      fen: this.chess.fen(),
+      moves: this.chess.history(),
+      lastMove: last ? { from: last.from, to: last.to } : null,
+      pgn: this.chess.pgn(),
+    });
   }
 
   /** True when it's the player's turn and nothing else is happening. */

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Chessboard } from 'react-chessboard';
 import type { GameController, GameState } from '../game/controller';
 import { Recognizer, speechRecognitionSupported } from '../speech/recognizer';
 import type { AppSettings } from './settings';
+import { Board, EMPTY_FEN } from './Board';
+import { LEVELS } from '../engine/stockfish';
 
 interface Props {
   controller: GameController;
@@ -105,110 +106,165 @@ export function GameScreen({ controller, state, settings, onSettings, onPlayAgai
   const over = state.phase === 'over';
   const secondsLeft = Math.max(0, Math.ceil((state.peekUntil - now) / 1000));
 
+  const [showMoves, setShowMoves] = useState(false);
+  const orientation = state.playerColor === 'w' ? 'white' : 'black';
+  const level = LEVELS.find((l) => l.id === settings.level);
+  const botName = `Opponent · ${level?.label.split(' — ')[0] ?? ''}`;
+
   return (
     <section className="game">
-      <div className="game-meta">
-        <span className={`chip ${state.playerColor === 'w' ? 'white' : 'black'}`}>
-          You: {state.playerColor === 'w' ? 'White' : 'Black'}
-        </span>
-        <span className="chip">Move {Math.floor(state.moves.length / 2) + 1}</span>
-        <span className="chip">Divyachakshu used: {state.peeks}</span>
-        <span className="chip warn">Illegal tries: {state.illegal}</span>
-      </div>
+      <div className="board-col">
+        <div className="player-bar">
+          <span className="who">
+            <span className={`piece-dot ${state.playerColor === 'w' ? 'b' : 'w'}`} />
+            {botName}
+          </span>
+          <span className="meta">{state.thinking ? 'thinking…' : ''}</span>
+        </div>
 
-      <div className="sanjaya card" aria-live="polite">
-        <div className="sanjaya-label">Sanjaya</div>
-        <p className="sanjaya-line">{lastSanjaya?.text ?? '…'}</p>
-      </div>
-
-      {over ? (
-        <div className="card result">
-          <h2>{state.result}</h2>
-          <p className="muted">
-            {state.moves.length} half-moves · {state.peeks} peeks · {state.illegal} illegal tries
-          </p>
-          <div className="row">
-            <button className="btn primary" onClick={onPlayAgain}>Play again</button>
-            <button className="btn" onClick={() => controller.reset()}>Change settings</button>
-            <button className="btn" onClick={() => navigator.clipboard?.writeText(state.pgn)}>Copy PGN</button>
+        <div className="board-frame">
+          {peeking && !over && <div className="peek-banner">Divyachakshu · {secondsLeft}s</div>}
+          <div className={`board-inner ${peeking ? '' : 'hidden-board'}`}>
+            <Board
+              id="main"
+              fen={peeking ? state.fen : EMPTY_FEN}
+              orientation={orientation}
+              lastMove={peeking ? state.lastMove : null}
+            />
+            {!peeking && (
+              <div className="fog-overlay">
+                <div className="cartouche">
+                  <div className="eye" aria-hidden>◉</div>
+                  <p>The board lives in your mind</p>
+                  <small>Use Divyachakshu to glimpse it</small>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="controls">
-          <button
-            className={`mic ${listening ? 'on' : ''} ${controller.awaitingPlayer ? '' : 'idle'}`}
-            disabled={!sttOk}
-            onPointerDown={settings.handsFree ? undefined : pressStart}
-            onPointerUp={settings.handsFree ? undefined : pressEnd}
-            onPointerLeave={settings.handsFree || !listening ? undefined : pressEnd}
-            onClick={settings.handsFree ? () => onSettings({ ...settings, handsFree: false }) : undefined}
-            aria-label={settings.handsFree ? 'Hands-free listening. Click to switch to hold-to-talk.' : 'Hold to talk'}
-          >
-            <MicIcon />
-            <span>{settings.handsFree ? 'Hands-free' : 'Hold to talk'}</span>
-          </button>
-          <div className="status">{status}</div>
-          {interim && <div className="interim">“{interim}”</div>}
-          {micError && <div className="notice">{micError}</div>}
-          {!settings.handsFree && sttOk && <div className="muted small">Tip: hold the space bar to talk.</div>}
-          {settings.handsFree === false && sttOk && (
-            <button className="link" onClick={() => onSettings({ ...settings, handsFree: true })}>Switch to hands-free</button>
-          )}
 
-          <form className="typed" onSubmit={submitTyped}>
-            <input
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-              placeholder="Or type a move or command (e.g. Nf3, why, repeat)"
-              aria-label="Type a move or command"
-            />
-            <button className="btn" type="submit">Send</button>
-          </form>
-
-          <div className="actions">
-            <button className="btn gold" onClick={() => controller.peek()} title="Briefly reveal the board">
-              Divyachakshu · peek
-            </button>
-            <button className="btn" onClick={() => controller.repeat()}>Repeat</button>
-            <button className="btn" onClick={() => controller.why()}>Why?</button>
-            <button className="btn danger" onClick={() => controller.resign()}>Resign</button>
-          </div>
+        <div className="player-bar">
+          <span className="who">
+            <span className={`piece-dot ${state.playerColor}`} />
+            You
+          </span>
+          <span className="meta">playing {state.playerColor === 'w' ? 'White' : 'Black'}</span>
         </div>
-      )}
 
-      <div className={`board-wrap ${peeking ? 'revealed' : ''}`}>
-        {peeking ? (
-          <>
-            {!over && <div className="peek-timer">Divine sight fades in {secondsLeft}s</div>}
-            <Chessboard
-              id="peek"
-              position={state.fen}
-              boardOrientation={state.playerColor === 'w' ? 'white' : 'black'}
-              arePiecesDraggable={false}
-              customDarkSquareStyle={{ backgroundColor: '#7a5c3e' }}
-              customLightSquareStyle={{ backgroundColor: '#e8d5b5' }}
-            />
-          </>
+        <div className="stats">
+          <div className="stat"><b>{Math.floor(state.moves.length / 2) + (state.moves.length % 2)}</b><span>moves</span></div>
+          <div className="stat"><b>{state.peeks}</b><span>peeks</span></div>
+          <div className="stat warn"><b>{state.illegal}</b><span>illegal tries</span></div>
+        </div>
+      </div>
+
+      <div className="side side-top">
+        <div className="card sanjaya" aria-live="polite">
+          <h2 className="card-title">Sanjaya says</h2>
+          <p className="sanjaya-line">{lastSanjaya?.text ?? '…'}</p>
+        </div>
+
+        {over ? (
+          <div className="card result">
+            <h2>{state.result}</h2>
+            <p className="muted" style={{ margin: 0 }}>
+              {state.moves.length} half-moves · {state.peeks} peeks · {state.illegal} illegal tries
+            </p>
+            <div className="row">
+              <button className="btn primary" onClick={onPlayAgain}>Play again</button>
+              <button className="btn" onClick={() => controller.reset()}>Change settings</button>
+              <button className="btn" onClick={() => navigator.clipboard?.writeText(state.pgn)}>Copy PGN</button>
+            </div>
+          </div>
         ) : (
-          <div className="fog">
-            <div className="fog-eye" aria-hidden>◉</div>
-            <p>The board lives in your mind.</p>
+          <div className="card controls">
+            <button
+              className={`mic ${listening ? 'on' : ''} ${controller.awaitingPlayer ? '' : 'idle'}`}
+              disabled={!sttOk}
+              onPointerDown={settings.handsFree ? undefined : pressStart}
+              onPointerUp={settings.handsFree ? undefined : pressEnd}
+              onPointerLeave={settings.handsFree || !listening ? undefined : pressEnd}
+              aria-label={settings.handsFree ? 'Listening automatically' : 'Hold to talk'}
+            >
+              <MicIcon />
+              <span>{settings.handsFree ? 'Hands-free' : 'Hold to talk'}</span>
+            </button>
+            <div className="status">{status}</div>
+            {interim && <div className="interim">“{interim}”</div>}
+            {micError && <div className="notice">{micError}</div>}
+            {sttOk && (
+              <div className="mode-row">
+                {settings.handsFree ? <span>Listening automatically on your turn.</span> : <span>Or hold the space bar.</span>}
+                <button className="link" onClick={() => onSettings({ ...settings, handsFree: !settings.handsFree })}>
+                  {settings.handsFree ? 'Use hold-to-talk' : 'Go hands-free'}
+                </button>
+              </div>
+            )}
+
+            <form className="typed" onSubmit={submitTyped}>
+              <input
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                placeholder="Type a move: Nf3, why, repeat…"
+                aria-label="Type a move or command"
+              />
+              <button className="btn" type="submit">Send</button>
+            </form>
+
+            <div className="actions">
+              <button className="btn gold" onClick={() => controller.peek()} title="Briefly reveal the board">
+                ◉ Divyachakshu — glimpse the board
+              </button>
+              <button className="btn" onClick={() => controller.repeat()}>Repeat</button>
+              <button className="btn" onClick={() => controller.why()}>Why?</button>
+              <button className="btn" onClick={() => controller.handleInput(['help'])}>Help</button>
+              <button className="btn danger" onClick={() => controller.resign()}>Resign</button>
+            </div>
           </div>
         )}
       </div>
 
-      <details className="card log">
-        <summary>Conversation ({state.log.length})</summary>
-        <ol>
-          {state.log.map((l, i) => (
-            <li key={i} className={l.who}>
-              <b>{l.who === 'you' ? 'You' : 'Sanjaya'}:</b> {l.text}
-            </li>
-          ))}
-        </ol>
-      </details>
+      <div className="side side-bottom">
+        <div className="card">
+          <div className="toggle-row">
+            <h2 className="card-title" style={{ margin: 0, flex: 1 }}>Moves</h2>
+            {!over && <button className="link" onClick={() => setShowMoves((v) => !v)}>{showMoves ? 'Hide' : 'Show'}</button>}
+          </div>
+          {showMoves || over ? (
+            <div className="movelist" style={{ marginTop: 10 }}>
+              {pairs(state.moves).map(([w, b], i) => (
+                <div key={i} style={{ display: 'contents' }}>
+                  <span className={`num ${i % 2 ? 'row-alt' : ''}`}>{i + 1}.</span>
+                  <span className={i % 2 ? 'row-alt' : ''}>{w}</span>
+                  <span className={i % 2 ? 'row-alt' : ''}>{b ?? ''}</span>
+                </div>
+              ))}
+              {state.moves.length === 0 && <span className="muted" style={{ gridColumn: '1 / -1' }}>No moves yet.</span>}
+            </div>
+          ) : (
+            <p className="muted small" style={{ margin: '8px 0 0' }}>Hidden, to keep it blindfold. Try to recall the moves yourself.</p>
+          )}
+        </div>
+
+        <details className="card log">
+          <summary className="card-title" style={{ margin: 0 }}>Conversation ({state.log.length})</summary>
+          <ol>
+            {state.log.map((l, i) => (
+              <li key={i} className={l.who}>
+                <b>{l.who === 'you' ? 'You' : 'Sanjaya'}:</b> {l.text}
+              </li>
+            ))}
+          </ol>
+        </details>
+      </div>
     </section>
   );
+}
+
+function pairs(moves: string[]): [string, string | undefined][] {
+  const out: [string, string | undefined][] = [];
+  for (let i = 0; i < moves.length; i += 2) out.push([moves[i], moves[i + 1]]);
+  return out;
 }
 
 function statusText(s: GameState, listening: boolean, awaiting: boolean): string {
