@@ -55,18 +55,18 @@ tests/      parser corpus, explainer cases, e2e
 ## 3. Features by phase
 
 ### Phase 1 — MVP: playable blindfold game
-- [ ] New game: color, bot strength, voice speed
-- [ ] Push-to-talk (space / big button) and hands-free mode (mic muted while Sanjaya speaks)
-- [ ] Move parser matched only against legal moves: SAN, spoken forms ("knight to f3",
+- [x] New game: color, bot strength, voice speed
+- [x] Push-to-talk (space / big button) and hands-free mode (mic muted while Sanjaya speaks)
+- [x] Move parser matched only against legal moves: SAN, spoken forms ("knight to f3",
       "knight takes e5"), "horse", "castle short/long", promotions, NATO letters
       ("bravo five"), fuzzy matching over recognizer alternatives, "did you mean…?"
-- [ ] Optional confirmation ("Knight f3, correct?")
-- [ ] Sanjaya announces bot moves in natural speech ("Bishop takes on c6, check.")
-- [ ] Illegal move detection (short reply) + "why?" for an explanation
-- [ ] Hidden board + **Divyachakshu** (peek) button, counted
-- [ ] Game end: mate, stalemate, repetition, 50-move rule, resign, draw
-- [ ] Keyboard input fallback
-- [ ] Deploy to GitHub Pages
+- [x] Optional confirmation ("Knight f3, correct?")
+- [x] Sanjaya announces bot moves in natural speech ("Bishop takes on c6, check.")
+- [x] Illegal move detection (short reply) + "why?" for an explanation
+- [x] Hidden board + **Divyachakshu** (peek) button, counted
+- [x] Game end: mate, stalemate, repetition, 50-move rule, resign, draw
+- [x] Keyboard input fallback
+- [x] Deploy to GitHub Pages
 
 ### Phase 2 — Coach
 - [ ] Illegal-move diagnosis: piece not there / moved earlier, path blocked, pinned,

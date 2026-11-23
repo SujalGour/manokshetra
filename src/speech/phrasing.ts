@@ -70,7 +70,8 @@ export function pieceOn(color: Color, piece: PieceSymbol, square: Square, own: C
 /** Joins lines with spaces, keeping text and speech in step. */
 export function join(...lines: (Line | string)[]): Line {
   const ls = lines.map((l) => (typeof l === 'string' ? { text: l, speech: l } : l));
-  return { text: ls.map((l) => l.text).join(' '), speech: ls.map((l) => l.speech).join(' ') };
+  const tidy = (xs: string[]) => xs.join(' ').replace(/\s+/g, ' ').replace(/\s+([?.!,:])/g, '$1').trim();
+  return { text: tidy(ls.map((l) => l.text)), speech: tidy(ls.map((l) => l.speech)) };
 }
 
 /** Template helper: tpl`Your knight left ${sq('g1')} on move 6.` */
