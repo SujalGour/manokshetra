@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LEVELS } from '../engine/stockfish';
-import { listVoices, defaultVoice } from '../speech/sanjaya';
+import { Sanjaya, sanjayaVoices, resolveVoice } from '../speech/sanjaya';
 import { speechRecognitionSupported } from '../speech/recognizer';
 import type { AppSettings } from './settings';
 import { Board } from './Board';
@@ -12,15 +12,20 @@ interface Props {
 }
 
 export function Setup({ settings, onChange, onStart }: Props) {
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(listVoices);
+  const [voices, setVoices] = useState(sanjayaVoices);
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return;
-    const update = () => setVoices(listVoices());
+    const update = () => setVoices(sanjayaVoices());
     speechSynthesis.addEventListener('voiceschanged', update);
     return () => speechSynthesis.removeEventListener('voiceschanged', update);
   }, []);
   const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => onChange({ ...settings, [k]: v });
-  const voiceURI = settings.voiceURI ?? defaultVoice(voices)?.voiceURI ?? '';
+  const voiceURI = resolveVoice(settings.voiceURI)?.voiceURI ?? '';
+  const preview = () => {
+    const sanjaya = new Sanjaya(() => ({ voiceURI, rate: settings.rate }));
+    sanjaya.cancel();
+    void sanjaya.speak('Sanjaya here. Black plays knight to F 6. Your move.');
+  };
   const sttOk = speechRecognitionSupported();
 
   return (
@@ -68,12 +73,15 @@ export function Setup({ settings, onChange, onStart }: Props) {
         </Field>
 
         <Field label="Sanjaya's voice">
-          <select value={voiceURI} onChange={(e) => set('voiceURI', e.target.value)}>
-            {voices.length === 0 && <option value="">Default voice</option>}
-            {voices.map((v) => (
-              <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
-            ))}
-          </select>
+          <div className="voice-row">
+            <select value={voiceURI} onChange={(e) => set('voiceURI', e.target.value)} aria-label="Sanjaya's voice">
+              {voices.length === 0 && <option value="">Default voice</option>}
+              {voices.map((c) => (
+                <option key={c.voice.voiceURI} value={c.voice.voiceURI}>{c.label}</option>
+              ))}
+            </select>
+            <button type="button" className="btn" onClick={preview}>▶ Preview</button>
+          </div>
         </Field>
 
         <Field label="Speaking speed" hint={`${settings.rate.toFixed(1)}×`}>

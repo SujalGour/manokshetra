@@ -232,3 +232,6 @@ details[open] summary { margin-bottom: 8px; }
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding-top: 26px; font-style: italic; }
 
 @media (max-width: 899px) { .hero-board, .ornament { display: none; } .lede { margin-bottom: 0; } }
+.voice-row { display: flex; gap: 8px; }
+.voice-row select { flex: 1; min-width: 0; }
+.voice-row .btn { white-space: nowrap; }

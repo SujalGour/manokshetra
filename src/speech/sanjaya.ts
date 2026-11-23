@@ -1,4 +1,5 @@
 /* Sanjaya, the narrator: text-to-speech with a promise that resolves when speaking ends. */
+import { curateVoices } from './voices';
 
 export interface Speaker {
   speak(text: string): Promise<void>;
@@ -13,17 +14,23 @@ export interface VoiceSettings {
 
 export function listVoices(): SpeechSynthesisVoice[] {
   if (typeof speechSynthesis === 'undefined') return [];
-  return speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('en'));
+  return speechSynthesis.getVoices();
 }
 
-/** Prefers a voice with an Indian English accent for Sanjaya, then any English voice. */
-export function defaultVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
-  return (
-    voices.find((v) => v.lang === 'en-IN') ??
-    voices.find((v) => /google uk english male|daniel/i.test(v.name)) ??
-    voices.find((v) => v.default) ??
-    voices[0]
-  );
+/** The short list shown in settings. */
+export function sanjayaVoices() {
+  return curateVoices(listVoices());
+}
+
+/** Best curated voice: Indian English if available, otherwise the clearest one. */
+export function defaultVoice(): SpeechSynthesisVoice | undefined {
+  return sanjayaVoices()[0]?.voice;
+}
+
+/** Resolves a saved voice, ignoring saved voices that are no longer on the list. */
+export function resolveVoice(voiceURI?: string): SpeechSynthesisVoice | undefined {
+  const list = sanjayaVoices();
+  return list.find((c) => c.voice.voiceURI === voiceURI)?.voice ?? list[0]?.voice;
 }
 
 export class Sanjaya implements Speaker {
@@ -34,8 +41,9 @@ export class Sanjaya implements Speaker {
     if (s.muted || typeof speechSynthesis === 'undefined' || !text) return Promise.resolve();
     return new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(text);
-      const voices = listVoices();
-      u.voice = voices.find((v) => v.voiceURI === s.voiceURI) ?? defaultVoice(voices) ?? null;
+      const voice = resolveVoice(s.voiceURI);
+      u.voice = voice ?? null;
+      if (voice) u.lang = voice.lang;
       u.rate = s.rate;
       let done = false;
       const finish = () => {
