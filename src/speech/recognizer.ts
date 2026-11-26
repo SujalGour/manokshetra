@@ -8,7 +8,8 @@ export interface RecognizerEvents {
   onResult: (alternatives: string[]) => void;
   /** Live partial transcript while the player is talking. */
   onInterim?: (text: string) => void;
-  onListening?: (listening: boolean) => void;
+  /** `info` is given when listening ends: whether anything was heard, and whether it was aborted. */
+  onListening?: (listening: boolean, info?: { heard: boolean; aborted: boolean }) => void;
   onError?: (message: string) => void;
 }
 
@@ -21,6 +22,7 @@ export class Recognizer {
   private rec: AnyRecognition | null = null;
   private listening = false;
   private gotResult = false;
+  private aborted = false;
 
   constructor(private events: RecognizerEvents, private lang = 'en-US') {}
 
@@ -42,6 +44,7 @@ export class Recognizer {
     rec.interimResults = true;
     rec.maxAlternatives = 5;
     this.gotResult = false;
+    this.aborted = false;
 
     rec.onresult = (e: AnyRecognition) => {
       const res = e.results[e.results.length - 1];
@@ -66,7 +69,7 @@ export class Recognizer {
     rec.onend = () => {
       this.listening = false;
       this.rec = null;
-      this.events.onListening?.(false);
+      this.events.onListening?.(false, { heard: this.gotResult, aborted: this.aborted });
     };
     try {
       rec.start();
@@ -85,6 +88,7 @@ export class Recognizer {
 
   /** Stop and discard (e.g. Sanjaya is about to speak). */
   abort() {
+    if (this.rec) this.aborted = true;
     this.rec?.abort();
   }
 

@@ -4,6 +4,7 @@ import { Sanjaya, sanjayaVoices, resolveVoice } from '../speech/sanjaya';
 import { speechRecognitionSupported } from '../speech/recognizer';
 import type { AppSettings } from './settings';
 import { Board } from './Board';
+import { unlockCues } from '../speech/cues';
 
 interface Props {
   settings: AppSettings;
@@ -93,6 +94,10 @@ export function Setup({ settings, onChange, onStart }: Props) {
         </Field>
 
         <label className="check">
+          <input type="checkbox" checked={settings.soundCues} onChange={(e) => set('soundCues', e.target.checked)} />
+          <span>Soft sound when the mic opens and closes</span>
+        </label>
+        <label className="check">
           <input type="checkbox" checked={settings.confirmMoves} onChange={(e) => set('confirmMoves', e.target.checked)} />
           <span>Confirm each move before playing it</span>
         </label>
@@ -101,7 +106,7 @@ export function Setup({ settings, onChange, onStart }: Props) {
           <span>Explain illegal moves right away (otherwise say “why”)</span>
         </label>
 
-        <button className="btn primary big" onClick={onStart}>Begin the battle</button>
+        <button className="btn primary big" onClick={() => { unlockCues(); onStart(); }}>Begin the battle</button>
       </div>
 
       <div className="card tips" style={{ marginTop: 16 }}>

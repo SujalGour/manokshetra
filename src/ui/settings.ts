@@ -2,6 +2,7 @@ import type { GameSettings } from '../game/controller';
 
 export interface AppSettings extends GameSettings {
   handsFree: boolean;
+  soundCues: boolean;
   voiceURI?: string;
   rate: number;
   lang: string;
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoExplain: false,
   peekSeconds: 5,
   handsFree: false,
+  soundCues: true,
   rate: 1,
   lang: 'en-US',
 };

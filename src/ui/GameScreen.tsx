@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameController, GameState } from '../game/controller';
 import { Recognizer, speechRecognitionSupported } from '../speech/recognizer';
 import type { AppSettings } from './settings';
+import { playCue, unlockCues } from '../speech/cues';
 import { Board, EMPTY_FEN } from './Board';
 import { LEVELS } from '../engine/stockfish';
 
@@ -20,6 +21,9 @@ export function GameScreen({ controller, state, settings, onSettings, onPlayAgai
   const [typed, setTyped] = useState('');
   const [now, setNow] = useState(Date.now());
   const recRef = useRef<Recognizer | null>(null);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const cueArmed = useRef(true);
   const sttOk = speechRecognitionSupported();
 
   if (!recRef.current) {
@@ -30,7 +34,22 @@ export function GameScreen({ controller, state, settings, onSettings, onPlayAgai
           void controller.handleInput(alts);
         },
         onInterim: setInterim,
-        onListening: setListening,
+        onListening: (on, info) => {
+          setListening(on);
+          const s = settingsRef.current;
+          if (on) {
+            // In hands-free mode the mic quietly restarts after silence; only chime when it newly opens.
+            if (s.soundCues && (!s.handsFree || cueArmed.current)) playCue('listen-start');
+            cueArmed.current = false;
+            return;
+          }
+          if (info?.aborted) {
+            cueArmed.current = true;
+            return;
+          }
+          if (info?.heard) cueArmed.current = true;
+          if (s.soundCues && (!s.handsFree || info?.heard)) playCue('listen-stop');
+        },
         onError: (m) => {
           setMicError(m);
           setListening(false);
@@ -45,6 +64,11 @@ export function GameScreen({ controller, state, settings, onSettings, onPlayAgai
   useEffect(() => {
     if (state.speaking || state.thinking || state.phase !== 'playing') rec.abort();
   }, [state.speaking, state.thinking, state.phase, rec]);
+
+  // A new turn or a switch to hands-free should chime when the mic opens.
+  useEffect(() => {
+    cueArmed.current = true;
+  }, [state.moves.length, settings.handsFree]);
 
   // Hands-free: start listening whenever it's the player's turn.
   useEffect(() => {
@@ -67,6 +91,7 @@ export function GameScreen({ controller, state, settings, onSettings, onPlayAgai
   const pressStart = useCallback(() => {
     if (settings.handsFree || !controller.awaitingPlayer) return;
     setMicError(null);
+    unlockCues();
     rec.start();
   }, [settings.handsFree, controller, rec]);
   const pressEnd = useCallback(() => {
